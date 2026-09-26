@@ -1306,13 +1306,18 @@
       const progress = moveSpan > 0.5
         ? Math.min(1, 1 - leadDist / moveSpan)
         : 1;
+      const isDragging = !!drag;
 
       for (let i = 0; i < TOTAL_CARDS; i++) {
         const rank = Math.min(trailRank(i, lead, moveDir), MAX_RANK_LAG);
         const diff = shortestDiff(rot[i], targetRotation);
         let ease;
 
-        if (moveDir > 0) {
+        if (isDragging) {
+          // During drag: all cards follow the finger together (no trail lag).
+          // Trail stagger breaks on direction reverse and freezes the ring.
+          ease = 0.45;
+        } else if (moveDir > 0) {
           const staggerSlow = 1 / (1 + rank * STAGGER * 10);
           ease = EASE_RIGHT * staggerSlow;
           const cardDist = Math.abs(diff);
@@ -1329,7 +1334,7 @@
             ease = EASE_LEFT_TRAIL / (1 + rank * 0.4) + inertia;
           }
         } else {
-          ease = 0.05;
+          ease = 0.12;
         }
 
         const k = 1 - Math.pow(1 - ease, dt);
@@ -1339,7 +1344,7 @@
       const liftK = 1 - Math.pow(1 - 0.08, dt);
       liftAmt += ((activeIdx >= 0 ? 1 : 0) - liftAmt) * liftK;
 
-      if (leadDist < 0.15 && moveDir !== 0) {
+      if (!isDragging && leadDist < 0.15 && moveDir !== 0) {
         let maxLag = 0;
         for (let i = 0; i < TOTAL_CARDS; i++) {
           maxLag = Math.max(maxLag, Math.abs(shortestDiff(rot[i], targetRotation)));
@@ -1401,7 +1406,12 @@
 
     stage.addEventListener('pointerdown', (e) => {
       if (!isCoarse()) return;
-      drag = { id: e.pointerId, x: e.clientX, rot: avgRot(), moved: false };
+      // Start from a clean synced state so reverse drags never inherit lag
+      const base = avgRot();
+      for (let i = 0; i < TOTAL_CARDS; i++) rot[i] = base;
+      targetRotation = base;
+      moveDir = 0;
+      drag = { id: e.pointerId, x: e.clientX, rot: base, moved: false };
       try { stage.setPointerCapture(e.pointerId); } catch (_) {}
     });
     stage.addEventListener('pointermove', (e) => {
@@ -1410,28 +1420,25 @@
       const dx = e.clientX - drag.x;
       if (Math.abs(dx) > 6) drag.moved = true;
       const next = drag.rot + dx * 0.28;
-      const delta = shortestDiff(avgRot(), next);
       leadIdx = SPACE_IDX;
-      if (Math.abs(delta) > 0.2) {
-        moveDir = delta > 0 ? 1 : -1;
-        moveSpan = Math.max(Math.abs(delta), 1);
-      }
+      moveDir = 0;
       targetRotation = next;
       activeIdx = -1;
       hoverIdx = -1;
     }, { passive: false });
-    // Redundant native touch handling: some WebKit/Chrome builds still start
-    // a native scroll/back gesture on a fast direction reversal even with
-    // touch-action:none + pointer capture, which fires pointercancel and
-    // freezes the drag. Blocking default on the raw touchmove event is the
-    // most reliable cross-browser way to stop that from ever starting.
+    // Block native scroll/back gesture on direction reverse (WebKit/Chrome),
+    // which otherwise fires pointercancel and freezes the ring.
     stage.addEventListener('touchmove', (e) => {
       if (drag) e.preventDefault();
     }, { passive: false });
     let justSwiped = false;
     function endDrag(e) {
-      if (!drag || (e && e.pointerId !== drag.id)) return;
+      if (!drag) return;
+      if (e && e.pointerId != null && e.pointerId !== drag.id) return;
       const wasSwipe = drag.moved;
+      // Snap all cards to the final target so the next gesture starts clean
+      for (let i = 0; i < TOTAL_CARDS; i++) rot[i] = targetRotation;
+      moveDir = 0;
       drag = null;
       if (wasSwipe) {
         justSwiped = true;
@@ -1442,6 +1449,7 @@
     }
     stage.addEventListener('pointerup', endDrag);
     stage.addEventListener('pointercancel', endDrag);
+    stage.addEventListener('lostpointercapture', endDrag);
 
     // Modal
     const cardData = {
