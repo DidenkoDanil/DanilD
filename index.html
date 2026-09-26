@@ -1096,8 +1096,8 @@
       const pad = isMobile ? 8 : 24;
       const maxR = Math.max(140, Math.min(w / 2 - cardHalf - pad, h * 0.72));
       const baseR = isMobile ? Math.min(260, maxR) : RADIUS_DESKTOP;
-      RADIUS = isMobile ? baseR * 2.5 : RADIUS_DESKTOP;
-      RING_RADIUS = isMobile ? Math.max(70, RADIUS * 0.42) : RING_RADIUS_DESKTOP;
+      RADIUS = isMobile ? baseR * 2 : RADIUS_DESKTOP;
+      RING_RADIUS = isMobile ? Math.max(70, RADIUS * 0.65) : RING_RADIUS_DESKTOP;
       if (guideRingCircle) {
         const d = RING_RADIUS * 2;
         guideRingCircle.style.width = d + 'px';
