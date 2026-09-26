@@ -116,7 +116,7 @@
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      touch-action: pan-y;
+      touch-action: none;
     }
 
     .circle-track {
@@ -973,7 +973,8 @@
 
       .circle-track,
       .guide-ring {
-        bottom: -70px;
+        bottom: auto;
+        top: 58%;
       }
 
       .guide-ring-circle {
@@ -1404,6 +1405,7 @@
     });
     stage.addEventListener('pointermove', (e) => {
       if (!drag || e.pointerId !== drag.id) return;
+      e.preventDefault();
       const dx = e.clientX - drag.x;
       if (Math.abs(dx) > 6) drag.moved = true;
       const next = drag.rot + dx * 0.28;
@@ -1515,7 +1517,9 @@
       medals: {
         title: "Автомоделювання",
         tag: "Досягнення",
-        content: `<p>Багаторазовий призер міських і обласних змагань з автомоделювання.</p>`
+        content: `<p>Багаторазовий призер міських і обласних змагань з автомоделювання.</p>
+          <p>Медалі за 1-ше та 2-ге місця</p>
+          <ul><li>Міські змагання</li><li>Обласні змагання</li><li>1-ше та 2-ге місця</li></ul>`
       },
       future: {
         title: "Незабаром",
