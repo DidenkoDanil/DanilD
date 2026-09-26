@@ -1095,7 +1095,8 @@
       const cardHalf = isMobile ? (window.innerWidth <= 380 ? 50 : 59) : 93.5;
       const pad = isMobile ? 8 : 24;
       const maxR = Math.max(140, Math.min(w / 2 - cardHalf - pad, h * 0.72));
-      RADIUS = isMobile ? Math.min(260, maxR) : RADIUS_DESKTOP;
+      const baseR = isMobile ? Math.min(260, maxR) : RADIUS_DESKTOP;
+      RADIUS = isMobile ? baseR * 4 : RADIUS_DESKTOP;
       RING_RADIUS = isMobile ? Math.max(70, RADIUS * 0.42) : RING_RADIUS_DESKTOP;
       if (guideRingCircle) {
         const d = RING_RADIUS * 2;
@@ -1418,7 +1419,15 @@
       targetRotation = next;
       activeIdx = -1;
       hoverIdx = -1;
-    });
+    }, { passive: false });
+    // Redundant native touch handling: some WebKit/Chrome builds still start
+    // a native scroll/back gesture on a fast direction reversal even with
+    // touch-action:none + pointer capture, which fires pointercancel and
+    // freezes the drag. Blocking default on the raw touchmove event is the
+    // most reliable cross-browser way to stop that from ever starting.
+    stage.addEventListener('touchmove', (e) => {
+      if (drag) e.preventDefault();
+    }, { passive: false });
     let justSwiped = false;
     function endDrag(e) {
       if (!drag || (e && e.pointerId !== drag.id)) return;
@@ -1439,7 +1448,9 @@
       site: {
         title: "Шкільний сайт",
         tag: "Web / UI",
-        content: `<p>Майбутній аналог програми "Мрія", поки іще в розробці.</p>`
+        content: `<p>Особистий кабінет учня: розклад, завдання, оцінки, самоврядування та чат.</p>
+          <p>«Доброго ранку, Діденко!» — спокійний зелений інтерфейс з картками розділів і мотиваційною стрічкою.</p>
+          <ul><li>UI / UX дизайн</li><li>Дашборд учня</li><li>Адаптивна верстка</li></ul>`
       },
       nebula: {
         title: "Діденко Данило",
