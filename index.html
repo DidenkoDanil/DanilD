@@ -1097,7 +1097,7 @@
       const maxR = Math.max(140, Math.min(w / 2 - cardHalf - pad, h * 0.72));
       const baseR = isMobile ? Math.min(260, maxR) : RADIUS_DESKTOP;
       RADIUS = isMobile ? baseR * 2 : RADIUS_DESKTOP;
-      RING_RADIUS = isMobile ? Math.max(70, RADIUS * 0.65) : RING_RADIUS_DESKTOP;
+      RING_RADIUS = isMobile ? Math.max(70, RADIUS * 0.6) : RING_RADIUS_DESKTOP;
       if (guideRingCircle) {
         const d = RING_RADIUS * 2;
         guideRingCircle.style.width = d + 'px';
@@ -1419,7 +1419,8 @@
       e.preventDefault();
       const dx = e.clientX - drag.x;
       if (Math.abs(dx) > 6) drag.moved = true;
-      const next = drag.rot + dx * 0.28;
+      // Mobile: invert rotation direction so swipe feels natural
+      const next = drag.rot - dx * 0.28;
       leadIdx = SPACE_IDX;
       moveDir = 0;
       targetRotation = next;
@@ -1432,6 +1433,24 @@
       if (drag) e.preventDefault();
     }, { passive: false });
     let justSwiped = false;
+
+    // Nearest real card index for the current average rotation (top = ME slot)
+    function nearestCardIdx() {
+      const avg = avgRot();
+      let best = SPACE_IDX;
+      let bestDist = Infinity;
+      const realCount = realCards.length;
+      for (let i = 0; i < realCount; i++) {
+        const t = i * step;
+        const d = Math.abs(shortestDiff(avg, t));
+        if (d < bestDist) {
+          bestDist = d;
+          best = i;
+        }
+      }
+      return best;
+    }
+
     function endDrag(e) {
       if (!drag) return;
       if (e && e.pointerId != null && e.pointerId !== drag.id) return;
@@ -1444,6 +1463,10 @@
         justSwiped = true;
         setTimeout(() => { justSwiped = false; }, 0);
         hoverIdx = -1;
+        // On release: settle on the nearest card under the ME marker
+        const idx = nearestCardIdx();
+        goTo(idx);
+        activeIdx = -1;
         scheduleIdle();
       }
     }
